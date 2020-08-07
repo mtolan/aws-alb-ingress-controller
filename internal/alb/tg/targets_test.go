@@ -156,6 +156,30 @@ func Test_TargetsReconcile(t *testing.T) {
 			},
 		},
 		{
+			Name:    "deregister a target with addition error",
+			Targets: &Targets{TgArn: tgArn, Ingress: dummy.NewIngress(), Backend: backend, TargetType: elbv2.TargetTypeEnumInstance},
+			DescribeTargetHealthCall: &DescribeTargetHealthCall{
+				TgArn: tgArn,
+				Output: &elbv2.DescribeTargetHealthOutput{TargetHealthDescriptions: []*elbv2.TargetHealthDescription{
+					{Target: newTd("id", 123), TargetHealth: newTh(elbv2.TargetHealthStateEnumHealthy)},
+				}},
+			},
+			DeregisterTargetsCall: &DeregisterTargetsCall{
+				Input: &elbv2.DeregisterTargetsInput{TargetGroupArn: aws.String(tgArn), Targets: []*elbv2.TargetDescription{newTd("id", 123)}},
+			},
+			RegisterTargetsCall: &RegisterTargetsCall{
+				Input: &elbv2.RegisterTargetsInput{TargetGroupArn: aws.String(tgArn), Targets: []*elbv2.TargetDescription{newTd("id2", 1234)}},
+				Err:   errors.New("ERROR STRING"),
+			},
+			ResolveCall: &ResolveCall{
+				InputIngress:    dummy.NewIngress(),
+				InputBackend:    backend,
+				InputTargetType: elbv2.TargetTypeEnumInstance,
+				Output:          []*elbv2.TargetDescription{newTd("id2", 1234)},
+			},
+			ExpectedError: errors.New("ERROR STRING"),
+		},
+		{
 			Name:    "deregister a target with error",
 			Targets: &Targets{TgArn: tgArn, Ingress: dummy.NewIngress(), Backend: backend, TargetType: elbv2.TargetTypeEnumInstance},
 			DescribeTargetHealthCall: &DescribeTargetHealthCall{

@@ -89,21 +89,6 @@ func (c *targetsController) Reconcile(ctx context.Context, t *Targets) error {
 	}
 
 	additions, removals := targetChangeSets(current, desired)
-	if len(additions) > 0 {
-		albctx.GetLogger(ctx).Infof("Adding targets to %v: %v", t.TgArn, tdsString(additions))
-		in := &elbv2.RegisterTargetsInput{
-			TargetGroupArn: aws.String(t.TgArn),
-			Targets:        additions,
-		}
-
-		if _, err := c.cloud.RegisterTargetsWithContext(ctx, in); err != nil {
-			albctx.GetLogger(ctx).Errorf("Error adding targets to %v: %v", t.TgArn, err.Error())
-			albctx.GetEventf(ctx)(api.EventTypeWarning, "ERROR", "Error adding targets to target group %s: %s", t.TgArn, err.Error())
-			return err
-		}
-		// TODO add Add events ?
-	}
-
 	if len(removals) > 0 {
 		albctx.GetLogger(ctx).Infof("Removing targets from %v: %v", t.TgArn, tdsString(removals))
 		if t.TargetType == elbv2.TargetTypeEnumIp {
@@ -124,6 +109,22 @@ func (c *targetsController) Reconcile(ctx context.Context, t *Targets) error {
 		}
 		// TODO add Delete events ?
 	}
+
+	if len(additions) > 0 {
+		albctx.GetLogger(ctx).Infof("Adding targets to %v: %v", t.TgArn, tdsString(additions))
+		in := &elbv2.RegisterTargetsInput{
+			TargetGroupArn: aws.String(t.TgArn),
+			Targets:        additions,
+		}
+
+		if _, err := c.cloud.RegisterTargetsWithContext(ctx, in); err != nil {
+			albctx.GetLogger(ctx).Errorf("Error adding targets to %v: %v", t.TgArn, err.Error())
+			albctx.GetEventf(ctx)(api.EventTypeWarning, "ERROR", "Error adding targets to target group %s: %s", t.TgArn, err.Error())
+			return err
+		}
+		// TODO add Add events ?
+	}
+
 	t.Targets = desired
 	return nil
 }
